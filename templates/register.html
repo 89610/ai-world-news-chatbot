@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Create Account — {{ app_name }}{% endblock %}
+{% block content %}
+<section class="auth-section">
+  <div class="container">
+    <div class="auth-card glass-card">
+      <div class="auth-icon"><i class='bx bx-user-plus'></i></div>
+      <h2>Create your account</h2>
+      <p class="auth-subtitle">Join to bookmark articles and chat with the AI assistant.</p>
+
+      <form method="POST" action="{{ url_for('auth.register') }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="mb-3 text-center">
+          <label class="form-label d-block">Profile Picture (optional)</label>
+          <input type="file" name="profile_picture" class="form-control" accept="image/png,image/jpeg,image/gif,image/webp">
+          <div class="form-text">PNG, JPG, GIF, or WEBP — max 2 MB.</div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Username</label>
+          <input type="text" name="username" class="form-control" required autofocus>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Email</label>
+          <input type="email" name="email" class="form-control" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Password</label>
+          <input type="password" name="password" class="form-control" minlength="6" required>
+          <div class="form-text">At least 6 characters.</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Confirm Password</label>
+          <input type="password" name="confirm_password" class="form-control" minlength="6" required>
+        </div>
+        <button type="submit" class="btn btn-primary-gradient w-100"><i class='bx bx-user-plus'></i> Create Account</button>
+      </form>
+
+      <p class="auth-footer-link">Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
+    </div>
+  </div>
+</section>
+{% endblock %}

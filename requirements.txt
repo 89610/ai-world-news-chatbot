@@ -1,0 +1,26 @@
+# AI World News Chatbot — Dependencies
+# Installed in full now (Phase 1) even though several are only used
+# starting in later phases — this avoids "add one more package" churn
+# as the project grows, and matches the tech stack decided up front.
+
+# --- Core web framework ---
+Flask==3.0.3
+python-dotenv==1.0.1
+
+# --- Database (Phase 2) ---
+Flask-SQLAlchemy==3.1.1
+Flask-Migrate==4.0.7
+PyMySQL==1.1.1
+cryptography==42.0.8
+
+# --- Authentication (Phase 3) ---
+Flask-Login==0.6.3
+Flask-Bcrypt==1.0.1
+Flask-WTF==1.2.1
+email-validator==2.2.0
+
+# --- News API integration (Phase 4) ---
+requests==2.32.3
+
+# --- Deployment ---
+gunicorn==22.0.0

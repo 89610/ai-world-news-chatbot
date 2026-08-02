@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}About — {{ app_name }}{% endblock %}
+{% block content %}
+<section class="hero-section" style="padding-bottom:2rem;">
+  <div class="container">
+    <span class="hero-badge"><i class='bx bx-info-circle'></i> About This Project</span>
+    <h1 class="hero-title">A news dashboard that <span>talks back.</span></h1>
+    <p class="hero-subtitle" style="max-width:700px;">
+      {{ app_name }} combines live headlines from trusted news sources with an AI
+      assistant that answers questions in plain language — grounded in real,
+      freshly-fetched articles rather than guesswork.
+    </p>
+  </div>
+</section>
+
+<section class="categories-section" style="padding-top:1rem;">
+  <div class="container">
+    <div class="section-heading">
+      <h2>What it does</h2>
+    </div>
+    <div class="row g-4">
+      <div class="col-md-6 col-lg-3">
+        <div class="category-chip" style="text-align:left;padding:1.5rem;">
+          <i class='bx bx-news' style="margin-bottom:0.6rem;"></i>
+          <h6 style="font-weight:700;">Live News</h6>
+          <p style="color:var(--color-muted);font-size:0.85rem;margin:0;">Real-time headlines, search, and category filtering via NewsAPI.</p>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-3">
+        <div class="category-chip" style="text-align:left;padding:1.5rem;">
+          <i class='bx bxs-bot' style="margin-bottom:0.6rem;"></i>
+          <h6 style="font-weight:700;">AI Chatbot</h6>
+          <p style="color:var(--color-muted);font-size:0.85rem;margin:0;">Ask natural-language questions; answers are grounded in live articles with sources cited.</p>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-3">
+        <div class="category-chip" style="text-align:left;padding:1.5rem;">
+          <i class='bx bx-bookmark' style="margin-bottom:0.6rem;"></i>
+          <h6 style="font-weight:700;">Bookmarks</h6>
+          <p style="color:var(--color-muted);font-size:0.85rem;margin:0;">Save articles to read later, tied to your account.</p>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-3">
+        <div class="category-chip" style="text-align:left;padding:1.5rem;">
+          <i class='bx bx-lock-alt' style="margin-bottom:0.6rem;"></i>
+          <h6 style="font-weight:700;">Secure Accounts</h6>
+          <p style="color:var(--color-muted);font-size:0.85rem;margin:0;">Hashed passwords, session auth, CSRF-protected forms.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="news-section">
+  <div class="container">
+    <div class="section-heading">
+      <h2>Built with</h2>
+    </div>
+    <div class="row g-4 text-center">
+      <div class="col-6 col-md-3"><i class='bx bxl-flask stat-icon'></i><p style="color:var(--color-muted);margin:0;">Flask</p></div>
+      <div class="col-6 col-md-3"><i class='bx bx-data stat-icon'></i><p style="color:var(--color-muted);margin:0;">MySQL</p></div>
+      <div class="col-6 col-md-3"><i class='bx bxl-bootstrap stat-icon'></i><p style="color:var(--color-muted);margin:0;">Bootstrap 5</p></div>
+      <div class="col-6 col-md-3"><i class='bx bxs-bot stat-icon'></i><p style="color:var(--color-muted);margin:0;">Google Gemini</p></div>
+    </div>
+  </div>
+</section>
+{% endblock %}

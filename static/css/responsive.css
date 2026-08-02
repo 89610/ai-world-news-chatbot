@@ -1,0 +1,31 @@
+/* =========================================================
+   Responsive overrides
+   ========================================================= */
+
+@media (max-width: 991.98px) {
+  .nav-actions { margin-left: 0; margin-top: 0.8rem; }
+  .hero-section { padding: 3rem 0 2.5rem; text-align: center; }
+  .hero-search { margin-left: auto; margin-right: auto; }
+  .hero-stats { justify-content: center; }
+  .skeleton-row { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 767.98px) {
+  .skeleton-row { grid-template-columns: 1fr; }
+  .section-heading.with-action { flex-direction: column; align-items: flex-start; gap: 0.8rem; }
+  .chat-panel { width: calc(100vw - 24px); right: 12px; bottom: 90px; }
+  .ai-fab { bottom: 18px; right: 18px; width: 52px; height: 52px; font-size: 1.4rem; }
+  .back-to-top { bottom: 18px; left: 18px; width: 42px; height: 42px; }
+  .category-chip { flex-basis: 120px; padding: 1rem 0.7rem; }
+  .category-carousel-arrow { width: 36px; height: 36px; font-size: 1.2rem; }
+}
+
+@media (max-width: 575.98px) {
+  .hero-title { font-size: 1.7rem; }
+  .hero-stats { gap: 1.5rem; flex-wrap: wrap; }
+  .news-card-image { height: 160px; }
+  .app-footer .newsletter-form { margin-top: 0.5rem; }
+  .category-chip { flex-basis: 105px; }
+  .category-chip i { font-size: 1.4rem; }
+  .category-chip span { font-size: 0.85rem; }
+}
