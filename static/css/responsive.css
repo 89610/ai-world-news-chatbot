@@ -28,4 +28,9 @@
   .category-chip { flex-basis: 105px; }
   .category-chip i { font-size: 1.4rem; }
   .category-chip span { font-size: 0.85rem; }
+
+  /* Sign In / username button is no longer hidden on mobile — shrink
+     it slightly so it sits comfortably next to the hamburger toggle
+     instead of crowding the navbar on narrow phone screens. */
+  .nav-actions .btn-primary-gradient { padding: 0.45rem 0.9rem; font-size: 0.85rem; }
 }
