@@ -17,6 +17,7 @@ import os
 from flask import Flask, render_template
 from flask_login import LoginManager
 from flask_wtf import CSRFProtect
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from config import get_config
 from database import init_db
@@ -28,6 +29,16 @@ csrf = CSRFProtect()
 def create_app(config_name: str = None) -> Flask:
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(get_config(config_name))
+
+    # Railway (and most cloud hosts) terminate HTTPS at their edge
+    # proxy, then forward requests to this app over plain HTTP
+    # internally. Without ProxyFix, Flask doesn't realize the original
+    # connection was secure — which can cause login/session cookies to
+    # behave inconsistently, especially on mobile browsers that
+    # enforce cookie security rules more strictly than desktop ones.
+    # ProxyFix reads the proxy's X-Forwarded-* headers so Flask treats
+    # the request correctly as HTTPS.
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
     app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 86400 if app.config.get("ENV") == "production" else 0
 

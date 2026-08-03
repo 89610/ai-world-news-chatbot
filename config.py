@@ -83,6 +83,14 @@ class DevelopmentConfig(BaseConfig):
 class ProductionConfig(BaseConfig):
     DEBUG = False
     ENV = "production"
+    # Cookies only sent over HTTPS, and "Lax" SameSite policy — the
+    # standard, safe settings for a real deployed site. Not set in
+    # DevelopmentConfig since localhost runs over plain HTTP, and a
+    # Secure-only cookie would silently break local login.
+    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    REMEMBER_COOKIE_SECURE = True
+    REMEMBER_COOKIE_SAMESITE = "Lax"
 
 
 class TestingConfig(BaseConfig):
