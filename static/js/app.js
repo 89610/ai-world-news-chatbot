@@ -137,44 +137,16 @@ function initScrollReveal() {
   }
 }
 
-/** Welcome splash: types out "Welcome to the AI World News Chatbot"
- *  letter by letter, holds briefly, then fades to reveal the real
- *  app underneath. Shown ONLY ONCE per browser session — using
- *  sessionStorage — so it appears the first time someone opens the
- *  site, but not again as they click between Home/About/Bookmarks/
- *  etc. Closing the browser and reopening later shows it again. */
+
+/** Shown briefly on every page load (including navigating to
+ *  About/Bookmarks from the menu, since those are full page loads
+ *  too, not single-page-app transitions) — fades out once the page
+ *  has fully rendered, so nothing ever "pops" into view unstyled. */
 function initPageLoader() {
   const overlay = document.getElementById("pageLoader");
-  const textEl = document.getElementById("welcomeText");
   if (!overlay) return;
-
-  const alreadyShown = sessionStorage.getItem("welcome_splash_shown");
-  if (alreadyShown) {
-    overlay.classList.add("page-loader-hidden");
-    overlay.style.display = "none"; // skip entirely, no flash of it appearing
-    return;
-  }
-
-  if (textEl) {
-    const message = "Welcome to the AI World News Chatbot";
-    let i = 0;
-    const typingSpeed = 45;
-
-    function typeNextChar() {
-      if (i < message.length) {
-        textEl.textContent += message.charAt(i);
-        i++;
-        setTimeout(typeNextChar, typingSpeed);
-      }
-    }
-    setTimeout(typeNextChar, 200);
-  }
-
   window.addEventListener("load", () => {
-    setTimeout(() => {
-      overlay.classList.add("page-loader-hidden");
-      sessionStorage.setItem("welcome_splash_shown", "true");
-    }, 4000);
+    setTimeout(() => overlay.classList.add("page-loader-hidden"), 250);
   });
 }
 
