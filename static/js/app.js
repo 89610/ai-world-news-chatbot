@@ -137,15 +137,33 @@ function initScrollReveal() {
   }
 }
 
-/** Shown briefly on every page load (including navigating to
- *  About/Bookmarks from the menu, since those are full page loads
- *  too, not single-page-app transitions) — fades out once the page
- *  has fully rendered, so nothing ever "pops" into view unstyled. */
+/** Welcome splash: types out "Welcome to the AI World News Chatbot"
+ *  letter by letter, holds briefly, then fades to reveal the real
+ *  app underneath — shown once per page load, total 3-5 seconds. */
 function initPageLoader() {
   const overlay = document.getElementById("pageLoader");
+  const textEl = document.getElementById("welcomeText");
   if (!overlay) return;
+
+  if (textEl) {
+    const message = "Welcome to the AI World News Chatbot";
+    let i = 0;
+    const typingSpeed = 45; // ms per character — full message types in ~1.6s
+
+    function typeNextChar() {
+      if (i < message.length) {
+        textEl.textContent += message.charAt(i);
+        i++;
+        setTimeout(typeNextChar, typingSpeed);
+      }
+    }
+    setTimeout(typeNextChar, 200); // brief pause before typing starts
+  }
+
   window.addEventListener("load", () => {
-    setTimeout(() => overlay.classList.add("page-loader-hidden"), 250);
+    // Total splash duration lands around 4 seconds: ~1.8s typing +
+    // ~2.2s hold, regardless of how fast the page itself finishes loading.
+    setTimeout(() => overlay.classList.add("page-loader-hidden"), 4000);
   });
 }
 
