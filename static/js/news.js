@@ -290,7 +290,13 @@ function articleCardHTML(article) {
           </div>
           <div class="news-card-footer">
             <span class="news-card-date">${published}</span>
-            <a href="${url}" target="_blank" rel="noopener" class="btn btn-sm btn-primary-gradient">Read More</a>
+            <div class="d-flex align-items-center gap-2">
+              <button class="icon-btn small share-btn"
+                      data-title="${title.replace(/"/g, '&quot;')}"
+                      data-url="${url}"
+                      aria-label="Share article"><i class='bx bx-share-alt'></i></button>
+              <a href="${url}" target="_blank" rel="noopener" class="btn btn-sm btn-primary-gradient">Read More</a>
+            </div>
           </div>
         </div>
       </div>

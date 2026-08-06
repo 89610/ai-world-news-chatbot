@@ -156,17 +156,15 @@ News, Powered by AI{% endblock %} {% block content %}
                 }}</span
               >
             </div>
-            <div class="news-card-footer">
-              <span class="news-card-date"
-                >{{ article.published | timeago }}</span
-              >
-              <a
-                href="{{ article.url }}"
-                target="_blank"
-                rel="noopener"
-                class="btn btn-sm btn-primary-gradient"
-                >Read More</a
-              >
+             <div class="news-card-footer">
+              <span class="news-card-date">{{ article.published | timeago }}</span>
+              <div class="d-flex align-items-center gap-2">
+                <button class="icon-btn small share-btn"
+                        data-title="{{ article.title|e }}"
+                        data-url="{{ article.url|e }}"
+                        aria-label="Share article"><i class='bx bx-share-alt'></i></button>
+                <a href="{{ article.url }}" target="_blank" rel="noopener" class="btn btn-sm btn-primary-gradient">Read More</a>
+              </div>
             </div>
           </div>
         </div>
