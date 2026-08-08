@@ -24,3 +24,6 @@ requests==2.32.3
 
 # --- Deployment ---
 gunicorn==22.0.0
+
+#Cloudinary
+cloudinary==1.41.0

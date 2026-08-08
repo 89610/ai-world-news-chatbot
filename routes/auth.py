@@ -65,7 +65,7 @@ def register():
         if uploaded_file and uploaded_file.filename:
             profile_picture_path = save_profile_picture(
                 uploaded_file,
-                current_app.config["UPLOAD_FOLDER"],
+                
                 current_app.config["ALLOWED_IMAGE_EXTENSIONS"],
             )
             if profile_picture_path is None:

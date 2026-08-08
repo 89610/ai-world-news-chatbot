@@ -62,10 +62,16 @@ class BaseConfig:
     # --- Caching ----------------------------------------------------------
     NEWS_CACHE_TTL_SECONDS = int(os.environ.get("NEWS_CACHE_TTL_SECONDS", "300"))
 
-     # --- File uploads (profile pictures) ---------------------------------
-    UPLOAD_FOLDER = os.path.join("static", "images", "profiles")
+    # --- File uploads (profile pictures) ---------------------------------
+    # Stored on Cloudinary, NOT the local server disk — Railway (and
+    # most cheap hosts) wipe local files on every restart/redeploy,
+    # which is exactly why uploaded pictures were disappearing.
+    # Cloudinary gives a permanent URL that survives restarts forever.
     MAX_CONTENT_LENGTH = 2 * 1024 * 1024  # 2 MB cap per uploaded file
     ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+    CLOUDINARY_CLOUD_NAME = os.environ.get("CLOUDINARY_CLOUD_NAME", "")
+    CLOUDINARY_API_KEY = os.environ.get("CLOUDINARY_API_KEY", "")
+    CLOUDINARY_API_SECRET = os.environ.get("CLOUDINARY_API_SECRET", "")
 
     # --- Sessions ("Remember Me") -----------------------------------------
     REMEMBER_COOKIE_DURATION_DAYS = int(os.environ.get("REMEMBER_COOKIE_DURATION_DAYS", "30"))

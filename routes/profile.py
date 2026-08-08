@@ -45,7 +45,7 @@ def edit_profile():
         if uploaded_file and uploaded_file.filename:
             picture_path = save_profile_picture(
                 uploaded_file,
-                current_app.config["UPLOAD_FOLDER"],
+                
                 current_app.config["ALLOWED_IMAGE_EXTENSIONS"],
             )
             if picture_path is None:
