@@ -11,13 +11,26 @@ to answer ONLY using those freshly-fetched articles, citing sources.
 Uses Gemini's REST API directly via `requests` (already a dependency)
 rather than adding the google-generativeai SDK — one less package for
 a call this simple.
+
+WHY RETRY + FALLBACK:
+Gemini sometimes returns 503 ("model is experiencing high demand") or 429
+(rate limit). These are temporary, so we retry once on the preferred model,
+then fall back to other Gemini models before showing the user an error.
 """
+
+import time
 
 import requests
 from flask import current_app
 from services import news_service
 
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
+
+# Tried in order after the preferred model (CHATBOT_MODEL) if it is overloaded.
+FALLBACK_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
+
+# HTTP statuses that mean "temporary problem — trying again can work".
+RETRYABLE_STATUS = {429, 500, 502, 503, 504}
 
 SYSTEM_INSTRUCTION = """You are the AI News Assistant for "AI World News Chatbot", \
 a news dashboard. You answer questions using ONLY the news articles provided \
@@ -49,6 +62,84 @@ def _build_context_block(articles):
     return "\n".join(lines)
 
 
+def _generation_config(model: str) -> dict:
+    """
+    Each Gemini model family controls 'thinking' differently, and sending the
+    wrong setting to a model returns a 400 error — so build it per model.
+    Thinking tokens share the output budget, so we keep thinking minimal to
+    avoid an empty reply.
+    """
+    config = {"maxOutputTokens": 1024}
+
+    if model.startswith("gemini-2.5-flash-lite"):
+        pass  # thinking is off by default on flash-lite
+    elif model.startswith("gemini-2.5"):
+        config["thinkingConfig"] = {"thinkingBudget": 0}
+    elif model.startswith("gemini-2.0"):
+        pass  # does not support thinkingConfig at all
+    else:
+        # Newer models (e.g. gemini-flash-latest) use thinkingLevel
+        config["thinkingConfig"] = {"thinkingLevel": "low"}
+
+    return config
+
+
+def _call_gemini(payload_base: dict, api_key: str, preferred_model: str):
+    """
+    Calls Gemini with retry + model fallback.
+    Returns (response_json, None) on success, or (None, error_message) on failure.
+    """
+    models = [preferred_model] + [m for m in FALLBACK_MODELS if m != preferred_model]
+
+    last_status = None
+    last_error_text = None
+
+    for index, model in enumerate(models):
+        url = f"{GEMINI_BASE_URL}/{model}:generateContent"
+        payload = dict(payload_base)
+        payload["generationConfig"] = _generation_config(model)
+
+        # 2 tries on the preferred model, 1 try on each fallback (keeps waits short)
+        attempts = 2 if index == 0 else 1
+
+        for attempt in range(attempts):
+            try:
+                resp = requests.post(url, params={"key": api_key}, json=payload, timeout=20)
+            except requests.exceptions.RequestException as exc:
+                last_status = None
+                last_error_text = str(exc)
+                time.sleep(1)
+                continue
+
+            if resp.status_code == 200:
+                try:
+                    return resp.json(), None
+                except ValueError:
+                    last_status = 200
+                    last_error_text = "invalid JSON from Gemini"
+                    break
+
+            last_status = resp.status_code
+            try:
+                last_error_text = (resp.json().get("error") or {}).get("message")
+            except ValueError:
+                last_error_text = None
+
+            if resp.status_code not in RETRYABLE_STATUS:
+                # Not a temporary problem. A bad key (400/403) will fail on every
+                # model, but a model-specific 400/404 can work on the next model.
+                break
+
+            if attempt + 1 < attempts:
+                time.sleep(1.5)
+
+    if last_status == 429:
+        return None, "Chatbot error: the free AI limit was reached. Please try again in a few minutes."
+    if last_status in (400, 401, 403):
+        return None, f"Chatbot error: {last_error_text or 'request was rejected. Check your GEMINI_API_KEY.'}"
+    return None, "Chatbot error: the AI is very busy right now. Please try again in a minute."
+
+
 def generate_reply(user_message: str):
     """Returns (reply_text, sources_list, error_or_None)."""
     api_key = current_app.config.get("GEMINI_API_KEY")
@@ -60,7 +151,6 @@ def generate_reply(user_message: str):
     context_block = _build_context_block(articles)
 
     model = current_app.config.get("CHATBOT_MODEL", "gemini-flash-latest")
-    url = f"{GEMINI_BASE_URL}/{model}:generateContent"
 
     payload = {
         "system_instruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
@@ -73,38 +163,23 @@ def generate_reply(user_message: str):
                 ),
             }],
         }],
-        "generationConfig": {
-            # Newer Gemini models "think" before answering, and those
-            # thinking tokens share the same budget as the final reply
-            # — without capping thinking, a modest maxOutputTokens can
-            # be entirely consumed by thinking, leaving an empty reply.
-            "thinkingConfig": {"thinkingLevel": "low"},
-            "maxOutputTokens": 1024,
-        },
     }
 
-    try:
-        resp = requests.post(url, params={"key": api_key}, json=payload, timeout=15)
-        data = resp.json()
+    data, error = _call_gemini(payload, api_key, model)
+    if error:
+        return None, [], error
 
-        if resp.status_code != 200:
-            error_message = (data.get("error") or {}).get("message", f"Gemini returned status {resp.status_code}")
-            return None, [], f"Chatbot error: {error_message}"
+    candidates = data.get("candidates", [])
+    if not candidates:
+        return None, [], "Chatbot error: no response generated."
 
-        candidates = data.get("candidates", [])
-        if not candidates:
-            return None, [], "Chatbot error: no response generated."
+    parts = candidates[0].get("content", {}).get("parts", [])
+    reply_text = "".join(p.get("text", "") for p in parts).strip()
+    finish_reason = candidates[0].get("finishReason", "")
 
-        parts = candidates[0].get("content", {}).get("parts", [])
-        reply_text = "".join(p.get("text", "") for p in parts).strip()
-        finish_reason = candidates[0].get("finishReason", "")
+    if not reply_text:
+        if finish_reason == "MAX_TOKENS":
+            return None, [], "Chatbot error: response got cut off (ran out of token budget)."
+        return None, [], "Chatbot error: empty response."
 
-        if not reply_text:
-            if finish_reason == "MAX_TOKENS":
-                return None, [], "Chatbot error: response got cut off (ran out of token budget)."
-            return None, [], "Chatbot error: empty response."
-
-        return reply_text, articles[:5], None
-
-    except requests.exceptions.RequestException as exc:
-        return None, [], f"Chatbot error: {exc}"
+    return reply_text, articles[:5], None
