@@ -87,7 +87,7 @@ def _call_gemini(payload_base: dict, api_key: str, preferred_model: str):
 
     for index, model in enumerate(models):
         url = f"{GEMINI_BASE_URL}/{model}:generateContent"
-        max_attempts = 2 if index == 0 else 1  # keep total wait short
+        max_attempts = 1  # fallback models already cover retries; keep waits short
         use_thinking = True
         attempt = 0
 
@@ -96,7 +96,7 @@ def _call_gemini(payload_base: dict, api_key: str, preferred_model: str):
             payload["generationConfig"] = _generation_config(use_thinking)
 
             try:
-                resp = requests.post(url, params={"key": api_key}, json=payload, timeout=20)
+                resp = requests.post(url, params={"key": api_key}, json=payload, timeout=12)
             except requests.exceptions.RequestException as exc:
                 logger.warning("Gemini [%s] network error: %s", model, exc)
                 seen_statuses.add(0)
