@@ -15,7 +15,8 @@ a call this simple.
 WHY RETRY + FALLBACK:
 Gemini sometimes returns 503 ("model is experiencing high demand") or 429
 (rate limit). These are temporary, so we retry once on the preferred model,
-then fall back to other Gemini models before showing the user an error.
+then fall back to other current Gemini models before showing an error.
+Every failed attempt is logged to the terminal with its real status code.
 """
 
 import time
@@ -26,8 +27,9 @@ from services import news_service
 
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 
-# Tried in order after the preferred model (CHATBOT_MODEL) if it is overloaded.
-FALLBACK_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
+# Tried in order after the preferred model (CHATBOT_MODEL) fails.
+# Gemini 2.0 is shut down and 2.5 is restricted, so use the 3.x family.
+FALLBACK_MODELS = ["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.6-flash"]
 
 # HTTP statuses that mean "temporary problem — trying again can work".
 RETRYABLE_STATUS = {429, 500, 502, 503, 504}
@@ -62,25 +64,15 @@ def _build_context_block(articles):
     return "\n".join(lines)
 
 
-def _generation_config(model: str) -> dict:
+def _generation_config(use_thinking: bool) -> dict:
     """
-    Each Gemini model family controls 'thinking' differently, and sending the
-    wrong setting to a model returns a 400 error — so build it per model.
-    Thinking tokens share the output budget, so we keep thinking minimal to
-    avoid an empty reply.
+    Thinking tokens share the output budget, so keep thinking low to avoid an
+    empty reply. If a model rejects the thinking setting, _call_gemini retries
+    that model once with use_thinking=False.
     """
     config = {"maxOutputTokens": 1024}
-
-    if model.startswith("gemini-2.5-flash-lite"):
-        pass  # thinking is off by default on flash-lite
-    elif model.startswith("gemini-2.5"):
-        config["thinkingConfig"] = {"thinkingBudget": 0}
-    elif model.startswith("gemini-2.0"):
-        pass  # does not support thinkingConfig at all
-    else:
-        # Newer models (e.g. gemini-flash-latest) use thinkingLevel
+    if use_thinking:
         config["thinkingConfig"] = {"thinkingLevel": "low"}
-
     return config
 
 
@@ -89,25 +81,26 @@ def _call_gemini(payload_base: dict, api_key: str, preferred_model: str):
     Calls Gemini with retry + model fallback.
     Returns (response_json, None) on success, or (None, error_message) on failure.
     """
+    logger = current_app.logger
     models = [preferred_model] + [m for m in FALLBACK_MODELS if m != preferred_model]
-
-    last_status = None
-    last_error_text = None
+    seen_statuses = set()
 
     for index, model in enumerate(models):
         url = f"{GEMINI_BASE_URL}/{model}:generateContent"
-        payload = dict(payload_base)
-        payload["generationConfig"] = _generation_config(model)
+        max_attempts = 2 if index == 0 else 1  # keep total wait short
+        use_thinking = True
+        attempt = 0
 
-        # 2 tries on the preferred model, 1 try on each fallback (keeps waits short)
-        attempts = 2 if index == 0 else 1
+        while attempt < max_attempts:
+            payload = dict(payload_base)
+            payload["generationConfig"] = _generation_config(use_thinking)
 
-        for attempt in range(attempts):
             try:
                 resp = requests.post(url, params={"key": api_key}, json=payload, timeout=20)
             except requests.exceptions.RequestException as exc:
-                last_status = None
-                last_error_text = str(exc)
+                logger.warning("Gemini [%s] network error: %s", model, exc)
+                seen_statuses.add(0)
+                attempt += 1
                 time.sleep(1)
                 continue
 
@@ -115,28 +108,35 @@ def _call_gemini(payload_base: dict, api_key: str, preferred_model: str):
                 try:
                     return resp.json(), None
                 except ValueError:
-                    last_status = 200
-                    last_error_text = "invalid JSON from Gemini"
+                    logger.warning("Gemini [%s] returned invalid JSON", model)
+                    seen_statuses.add(200)
                     break
 
-            last_status = resp.status_code
             try:
-                last_error_text = (resp.json().get("error") or {}).get("message")
+                error_text = (resp.json().get("error") or {}).get("message", "")
             except ValueError:
-                last_error_text = None
+                error_text = resp.text[:200]
+            logger.warning("Gemini [%s] -> HTTP %s: %s", model, resp.status_code, error_text)
+            seen_statuses.add(resp.status_code)
+
+            # Model rejected the thinking setting: retry same model without it.
+            if resp.status_code == 400 and use_thinking and "think" in error_text.lower():
+                use_thinking = False
+                continue
 
             if resp.status_code not in RETRYABLE_STATUS:
-                # Not a temporary problem. A bad key (400/403) will fail on every
-                # model, but a model-specific 400/404 can work on the next model.
-                break
+                break  # e.g. 404 model gone, 403 bad key: move to the next model
 
-            if attempt + 1 < attempts:
+            attempt += 1
+            if attempt < max_attempts:
                 time.sleep(1.5)
 
-    if last_status == 429:
+    if seen_statuses & {401, 403}:
+        return None, "Chatbot error: the Gemini API key was rejected. Check GEMINI_API_KEY in your .env file."
+    if 429 in seen_statuses:
         return None, "Chatbot error: the free AI limit was reached. Please try again in a few minutes."
-    if last_status in (400, 401, 403):
-        return None, f"Chatbot error: {last_error_text or 'request was rejected. Check your GEMINI_API_KEY.'}"
+    if seen_statuses == {404}:
+        return None, "Chatbot error: the AI model is unavailable. Check CHATBOT_MODEL in your settings."
     return None, "Chatbot error: the AI is very busy right now. Please try again in a minute."
 
 
