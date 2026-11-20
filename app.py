@@ -74,12 +74,14 @@ def create_app(config_name: str = None) -> Flask:
     from routes.news import news_bp
     from routes.chat import chat_bp
     from routes.bookmark import bookmark_bp
+    from routes.welcome import welcome_bp                # NEW
     app.register_blueprint(home_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(profile_bp)
     app.register_blueprint(news_bp)
     app.register_blueprint(chat_bp)
     app.register_blueprint(bookmark_bp)
+    app.register_blueprint(welcome_bp)                   # NEW
 
     # JSON API blueprints are exempt from Flask-WTF's CSRF check since
     # they're called via fetch() with a JSON body, not an HTML <form>.
@@ -137,6 +139,3 @@ if __name__ == "__main__":
         webbrowser.open("http://127.0.0.1:5000")
 
     app.run(debug=app.config.get("DEBUG", True))
-    
-
-    
